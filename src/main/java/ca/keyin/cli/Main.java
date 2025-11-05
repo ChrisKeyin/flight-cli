@@ -22,6 +22,7 @@ public class Main {
             System.out.println("1) Q1: List airports in a city");
             System.out.println("2) Q2: List aircraft a passenger has flown on");
             System.out.println("3) Q3: List airports an aircraft uses (takeoff/landing)");
+            System.out.println("4) Q4: List airports a passenger has used");
             System.out.println("0) Exit");
 
             String choice = readMenuChoice(sc, "Choose: ");
@@ -31,6 +32,7 @@ public class Main {
                     case "1" -> handleQ1(client, sc);
                     case "2" -> handleQ2(client, sc);
                     case "3" -> handleQ3(client, sc);
+                    case "4" -> handleQ4(client, sc);
                     case "0" -> {
                         System.out.println("Bye!");
                         return;
@@ -154,6 +156,40 @@ public class Main {
             System.out.println("No airports recorded for this aircraft.");
         } else {
             System.out.println("\nAirports used by this aircraft:");
+            for (AirportDto ap : airports) {
+                System.out.printf("  - %s (%s) [id=%d]%n", ap.name(), ap.code(), ap.id());
+            }
+        }
+    }
+
+    private static void handleQ4(FlightApiClient client, Scanner sc) throws Exception {
+        List<PassengerDto> passengers = client.getAs(
+                "/passengers",
+                new TypeReference<List<PassengerDto>>() {}
+        );
+        if (passengers.isEmpty()) {
+            System.out.println("No passengers found.");
+            return;
+        }
+
+        System.out.println("\nPassengers:");
+        for (PassengerDto p : passengers) {
+            System.out.printf("  [%d] %s %s  (tel: %s)%n",
+                    p.id(), p.firstName(), p.lastName(), p.phoneNumber());
+        }
+
+        System.out.print("\nEnter passenger id: ");
+        long passengerId = Long.parseLong(sc.nextLine().trim());
+
+        List<AirportDto> airports = client.getAs(
+                "/passengers/" + passengerId + "/airports",
+                new TypeReference<List<AirportDto>>() {}
+        );
+
+        if (airports.isEmpty()) {
+            System.out.println("No airports recorded for this passenger.");
+        } else {
+            System.out.println("\nAirports used by this passenger:");
             for (AirportDto ap : airports) {
                 System.out.printf("  - %s (%s) [id=%d]%n", ap.name(), ap.code(), ap.id());
             }
