@@ -21,6 +21,7 @@ public class Main {
             System.out.println("\n=== Flight CLI ===");
             System.out.println("1) Q1: List airports in a city");
             System.out.println("2) Q2: List aircraft a passenger has flown on");
+            System.out.println("3) Q3: List airports an aircraft uses (takeoff/landing)");
             System.out.println("0) Exit");
 
             String choice = readMenuChoice(sc, "Choose: ");
@@ -29,6 +30,7 @@ public class Main {
                 switch (choice) {
                     case "1" -> handleQ1(client, sc);
                     case "2" -> handleQ2(client, sc);
+                    case "3" -> handleQ3(client, sc);
                     case "0" -> {
                         System.out.println("Bye!");
                         return;
@@ -116,4 +118,46 @@ public class Main {
             }
         }
     }
+
+    private static void handleQ3(FlightApiClient client, Scanner sc) throws Exception {
+        boolean showedList = false;
+
+        try {
+            List<AircraftDto> aircraftList = client.getAs(
+                    "/aircraft",
+                    new TypeReference<List<AircraftDto>>() {}
+            );
+            if (!aircraftList.isEmpty()) {
+                System.out.println("\nAvailable Aircraft:");
+                for (AircraftDto a : aircraftList) {
+                    System.out.printf("  [%d] %s | %s | seats: %d%n",
+                            a.id(), a.type(), a.airlineName(), a.numberOfPassengers());
+                }
+                showedList = true;
+            }
+        } catch (RuntimeException ignored) {
+        }
+
+        if (!showedList) {
+            System.out.println("\nEnter an aircraft id (e.g., 1, 2, or 3).");
+        }
+
+        System.out.print("Enter aircraft id: ");
+        long aircraftId = Long.parseLong(sc.nextLine().trim());
+
+        List<AirportDto> airports = client.getAs(
+                "/aircraft/" + aircraftId + "/airports",
+                new TypeReference<List<AirportDto>>() {}
+        );
+
+        if (airports.isEmpty()) {
+            System.out.println("No airports recorded for this aircraft.");
+        } else {
+            System.out.println("\nAirports used by this aircraft:");
+            for (AirportDto ap : airports) {
+                System.out.printf("  - %s (%s) [id=%d]%n", ap.name(), ap.code(), ap.id());
+            }
+        }
+    }
+
 }
