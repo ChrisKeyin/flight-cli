@@ -2,6 +2,8 @@ package ca.keyin.cli;
 
 import ca.keyin.cli.dto.AirportDto;
 import ca.keyin.cli.dto.CityDto;
+import ca.keyin.cli.dto.PassengerDto;
+import ca.keyin.cli.dto.AircraftDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.List;
@@ -18,23 +20,39 @@ public class Main {
         while (true) {
             System.out.println("\n=== Flight CLI ===");
             System.out.println("1) Q1: List airports in a city");
+            System.out.println("2) Q2: List aircraft a passenger has flown on");
             System.out.println("0) Exit");
-            System.out.print("Choose: ");
-            String choice = sc.nextLine().trim();
+
+            String choice = readMenuChoice(sc, "Choose: ");
 
             try {
-                if ("1".equals(choice)) {
-                    handleQ1(client, sc);
-                } else if ("0".equals(choice)) {
-                    System.out.println("Bye!");
-                    return;
-                } else {
-                    System.out.println("Invalid choice. Try again.");
+                switch (choice) {
+                    case "1" -> handleQ1(client, sc);
+                    case "2" -> handleQ2(client, sc);
+                    case "0" -> {
+                        System.out.println("Bye!");
+                        return;
+                    }
+                    default -> System.out.println("Invalid choice. Try again.");
                 }
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
                 e.printStackTrace(System.out);
             }
+        }
+    }
+
+    private static String readMenuChoice(Scanner sc, String prompt) {
+        System.out.print(prompt);
+        System.out.flush();
+        while (true) {
+            String line = sc.nextLine();
+            if (line != null) {
+                line = line.trim();
+                if (!line.isEmpty()) return line;
+            }
+            System.out.print(prompt);
+            System.out.flush();
         }
     }
 
@@ -64,6 +82,37 @@ public class Main {
             System.out.println("\nAirports in selected city:");
             for (AirportDto a : airports) {
                 System.out.printf("  - %s (%s) [id=%d]%n", a.name(), a.code(), a.id());
+            }
+        }
+    }
+
+    private static void handleQ2(FlightApiClient client, Scanner sc) throws Exception {
+        List<PassengerDto> passengers = client.getAs("/passengers", new TypeReference<List<PassengerDto>>() {});
+        if (passengers.isEmpty()) {
+            System.out.println("No passengers found.");
+            return;
+        }
+
+        System.out.println("\nPassengers:");
+        for (PassengerDto p : passengers) {
+            System.out.printf("  [%d] %s %s  (tel: %s)%n", p.id(), p.firstName(), p.lastName(), p.phoneNumber());
+        }
+
+        System.out.print("\nEnter passenger id: ");
+        long passengerId = Long.parseLong(sc.nextLine().trim());
+
+        List<AircraftDto> aircraft = client.getAs(
+                "/passengers/" + passengerId + "/aircraft",
+                new TypeReference<List<AircraftDto>>() {}
+        );
+
+        if (aircraft.isEmpty()) {
+            System.out.println("This passenger has no recorded flights.");
+        } else {
+            System.out.println("\nAircraft flown by this passenger:");
+            for (AircraftDto a : aircraft) {
+                System.out.printf("  - %s | %s | seats: %d (id=%d)%n",
+                        a.type(), a.airlineName(), a.numberOfPassengers(), a.id());
             }
         }
     }
